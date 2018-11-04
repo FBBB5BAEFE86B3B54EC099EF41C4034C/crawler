@@ -2,6 +2,10 @@ import requests
 import os
 # from lxml import html
 from bs4 import BeautifulSoup
+from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClient
+
+elasticsearchCrawlerClient = ElasticsearchCrawlerClient("http://127.0.0.1:9300/")
+
 
 def crawler():
     header = {'User-Agent':
@@ -21,7 +25,7 @@ def crawler():
             continue
         loc_req = requests.get(url_majors+href, headers = header)
 
-        soup = BeautifulSoup(loc_req.text)
+        soup = BeautifulSoup(loc_req.text, "html.parser")
         dir = os.path.abspath(os.curdir)
         with open(dir+'/'+'file'+'.txt','a') as f:
             title = soup.find('div', {'class':'clearfix'}).find('h1').text
@@ -68,6 +72,10 @@ def crawler():
                     for te in loc_soup.find_all('p'):
                         f.write(te.text + ' ')
                     f.write('\n')
+                    content = ''
+                    for te in loc_soup.find_all('p'):
+                        content += te.text + '\n'
+
                     try:
                         f.write('DATE: ' + ''.join([c if c not in ['\n','\t'] else '' for c in loc_soup.find('div', {'class': 'node-meta__date'}).text]) + '\n')
                     except:
@@ -89,10 +97,15 @@ def crawler():
             except Exception as e:
                 pass
 
-            try:
-                if elasticsearchCrawlerClient.contains(key):
-                    pass
-                else:
-                    elasticsearchCrawlerClient.put(key, data, date, tags)
-            except:
-                pass
+            #try:
+            #    if elasticsearchCrawlerClient.contains(url_majors+x['href']):
+            #        pass
+            #    else:
+            #        elasticsearchCrawlerClient.put(
+            #            url_majors+x['href'],
+            #            content,
+            #            ''.join([c if c not in ['\n', '\t'] else '' for c in loc_soup.find('div', {'class': 'node-meta__date'}).text]),
+            #            ''.join([c if c not in ['\n','\t'] else '' for c in title] ,
+            #                    tags)
+            #except:
+            #    pass

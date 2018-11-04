@@ -11,7 +11,7 @@ class core_processor(object):
         SdelanoUNasProvider()
     ]
 
-    def prt(self):
+    def process(self):
         list_of_threads = []
         for crawler in self.list_of_crawlers:
             thread = threading.Thread(target=crawler.crawl)
@@ -24,4 +24,4 @@ class core_processor(object):
 
 if __name__ == '__main__':
     core = core_processor()
-    core.prt()
+    core.process()

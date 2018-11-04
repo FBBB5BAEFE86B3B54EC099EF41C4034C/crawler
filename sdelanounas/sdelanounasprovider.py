@@ -7,7 +7,7 @@ class SdelanoUNasProvider(CrawlerProvider):
     startPage = 'http://www.sdelanounas.ru/sphinxsearch/?s=росэнергоатом&page='
 
     def crawl(self):
-        crawler.collectUrls(baseUrl=self.baseUrl, searchUrl=self.startPage)
+        crawler.CollectUrls(baseUrl=self.baseUrl, searchUrl=self.startPage)
 
 
 

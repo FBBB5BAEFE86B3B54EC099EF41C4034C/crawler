@@ -1,23 +1,26 @@
-from rosenergoatom.proxy_getter import get_viable_proxy_list
-from rosenergoatom.proxy_getter import get_html_proxy
-import requests
-import time
 import random
-import os
+import time
+
+import requests
 from bs4 import BeautifulSoup
 
+from proxy.proxy_getter import get_html_proxy
+from proxy.proxy_getter import get_viable_proxy_list
+from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClient
+
+
 list_of_viable_proxies = get_viable_proxy_list(get_html_proxy('https://www.ip-adress.com/proxy-list'), 10)
-cur_dir = os.path.dirname(__file__)
-useragent_filename = os.path.join(cur_dir, 'useragents.txt')
-list_of_user_agents = open(useragent_filename).read().split('\n')
+list_of_user_agents = open('../proxy/useragents.txt').read().split('\n')
 # Подсчет кол-ва статей
 numberArticle = 0
+elasticsearchCrawlerClient = ElasticsearchCrawlerClient("http://127.0.0.1:9300/")
 
 
 def get_html(url, user_agent, proxy):
-	# при выполнении get получаем ответ Response 200. Это означает что все ок.
-	r = requests.get(url, timeout = None, proxies = {'': proxy})
-	return r.text
+    # при выполнении get получаем ответ Response 200. Это означает что все ок.
+    r = requests.get(url, timeout=None, proxies={'': proxy})
+    return r.text
+
 
 def NewArticleUrl(start_url):
     time.sleep(round(abs(random.gauss(1.5, 1) + random.random() / 10 + random.random() / 100), 4))
@@ -38,7 +41,7 @@ def NewArticleUrl(start_url):
         s = BeautifulSoup(code, "html.parser")
         count -= 1
 
-        for a in s.findAll('p', {'class':'news-item'}):
+        for a in s.findAll('p', {'class': 'news-item'}):
             print("NUMBER OF ARTICLE: ", numberArticle, '\n')
             item_id = a.get('id')
             length = len(item_id)
@@ -46,7 +49,6 @@ def NewArticleUrl(start_url):
             item = item_id[item_start:length:1] + '/'
             Crawler("%s%s" % (start_url, item))
             numberArticle += 1
-
 
 
 def OldArticleUrl(start_url):
@@ -66,8 +68,7 @@ def OldArticleUrl(start_url):
     code_pages = get_html(url_pages, useragent, proxy)
     # code_pages = requests.get(url_pages, headers=header)
     soup_page = BeautifulSoup(code_pages, "html.parser")
-    pages = soup_page.find('a',{'class':'modern-page-dots'}).find_next_sibling('a')
-
+    pages = soup_page.find('a', {'class': 'modern-page-dots'}).find_next_sibling('a')
 
     while (count <= int(pages.text)):
         page_url = "%s%s" % (web_url, count)
@@ -77,9 +78,9 @@ def OldArticleUrl(start_url):
         # plain = code.text
         s = BeautifulSoup(code, "html.parser")
         count += 1
-        head = s.findAll('div', {'class':'news-list'})[2]
+        head = s.findAll('div', {'class': 'news-list'})[2]
 
-        for a in head.findAll('p', {'class':'news-item'}):
+        for a in head.findAll('p', {'class': 'news-item'}):
             print("NUMBER OF ARTICLE: ", numberArticle, '\n')
             item_id = a.get('id')
             length = len(item_id)
@@ -87,7 +88,6 @@ def OldArticleUrl(start_url):
             item = 'index.php?ELEMENT_ID=' + item_id[item_start:length:1]
             Crawler("%s%s" % (start_url, item))
             numberArticle += 1
-
 
 
 def Crawler(url):
@@ -103,8 +103,7 @@ def Crawler(url):
     file_craw = open("craw_rosenergoatom.txt", mode='a', encoding='utf8')
     print(url)
 
-
-    #Дата
+    # Дата
     try:
         div = soup.find('div', {'id': 'content'})
         date = div.find('span', {'class': 'news-date-time'})
@@ -114,8 +113,7 @@ def Crawler(url):
     print(dateText)
     file_craw.write(dateText)
 
-
-    #Tag
+    # Tag
     # tag = soup.find('div', {'class':'col-lg-6 content-block'}).find('h1')
     try:
         tag = div.find('small', {'class': 'sourcetext'})
@@ -125,8 +123,7 @@ def Crawler(url):
     print(tagText)
     file_craw.write(tagText)
 
-
-    #Заголовок
+    # Заголовок
     try:
         title = div.find('p', {'class': 'detnewsTitle'})
         titleText = "%s %s\n" % ("TITLE:", title.text.strip())
@@ -135,9 +132,7 @@ def Crawler(url):
     print(titleText)
     file_craw.write(titleText)
 
-
-
-    #Статья
+    # Статья
     try:
         content = div.find('div').find('div')
         contentText = "%s %s\n" % ("CONTENT:", content.text.strip().replace("\n", ""))
@@ -146,24 +141,25 @@ def Crawler(url):
     print(contentText)
     file_craw.write(contentText)
 
-
-    #Разделитель
+    # Разделитель
     separatorText = "______________________________________________________________________________________\n"
     print(separatorText)
     file_craw.write(separatorText)
 
     file_craw.close()
 
-    # Обращение к внешнему объекту elasticsearchCrawlerClient
-    # try:
-    #     if elasticsearchCrawlerClient.contains(url) is False:
-    #         elasticsearchCrawlerClient.put(url, contentText, dateText, tagText)
-    # except Exception:
-    #     print('Ошибка записи в базу')
+    try:
+        if not(elasticsearchCrawlerClient.contains(url)):
+            elasticsearchCrawlerClient.put(url,
+                                           content.text.strip().replace("\n", ""),
+                                           date.text,
+                                           title.text.strip(),
+                                           tag.text.strip())
+    except Exception:
+        print('Ошибка записи в базу')
 
 
 def crawl():
-
     # Статьи за 2017-2018
     NewArticleUrl('http://www.rosenergoatom.ru/zhurnalistam/novosti-otrasli/')
 

@@ -1,81 +1,106 @@
-import requests
+from proxy.proxy_getter import get_viable_proxy_list
+from proxy.proxy_getter import get_html_proxy
 from bs4 import BeautifulSoup
+from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClient
+import requests
+import random
+import time
+import os
 
-def crawl(webUrl):
+def Crawl(webUrl):
     url = webUrl
-    code = requests.get(url)
-    plain = code.text
-    s = BeautifulSoup(plain, "html.parser")
+    html = getHtmlWithProxy(url)
+    s = BeautifulSoup(html, "html.parser")
     f = open("crawlerResult.txt", mode='a', encoding='utf8')
+    hasError = False
 
     #Дата статьи
-    date = s.findAll('li', {'class':'time'})[0]
-    if len(date.findAll('span')):
-        date.span.replace_with(" ")
-    dateText = "%s %s\n" % ("DATE:", date.text)
+    try:
+        date = s.findAll('li', {'class':'time'})[0]
+        if date.findAll('span'):
+            date.span.replace_with(" ")
+        date = date.text
+    except Exception as e:
+        print("Исключение при определении даты статьи", url, e)
+        date = ""
+        hasError = True
+    dateText = "%s %s\n" % ("DATE:", date)
 
-    #Данные за 2016-2018 года
-    if ("2018" in dateText) or ("2017" in dateText) or ("2016" in dateText):
-        #URL
-        urlText = "%s %s\n" % ("URL:", webUrl)
-        print(urlText)
-        f.write(urlText)
+    #URL
+    urlText = "%s %s\n" % ("URL:", webUrl)
+    print(urlText)
+    f.write(urlText) 
 
-        #Заголовок статьи
-        header = ""
-        if len(s.findAll('h1', {'class':'h1_openblog'})):
+    #Заголовок статьи
+    header = ""
+    try:
+        if s.findAll('h1', {'class':'h1_openblog'}):
             header = s.findAll('h1', {'class':'h1_openblog'})[0]
         else:
             header = s.findAll('h1', {'class':'unique'})[0]
-        headerText = "%s %s\n" % ("HEADER:", header.text.strip())
-        print(headerText)
-        f.write(headerText)
+        header = header.text.strip()
+    except Exception as e:
+        print("Исключение при определении заголовка статьи", url, e)
+        header = ""
+    headerText = "%s %s\n" % ("HEADER:", header)
+    print(headerText)
+    f.write(headerText) 
 
-        #Содержимое статьи
+    #Содержимое статьи
+    try:
         content = []
         article = s.findAll('div', {'class':'text __sun_article_text'})[0]
-        while len(article.findAll('ul')):
-            article.ul.replace_with("")
-        while len(article.findAll('li')):
-            article.ul.replace_with("")
-        while len(article.findAll('span')):
-            article.span.replace_with("")
-        while len(article.findAll('div')):
+        if (article.text == '\n'):
+            article = s.contents[4]
+        else:
+            while article.findAll('li'):
+                article.li.replace_with("")
+        while article.findAll('div'):
             article.div.replace_with("")
         content.append("" if article.text is None else article.text.replace("\n", ""))
-        if article.string is None:
-            for p in s.findAll('p'):
-                if not(p.text is None) and (p.find_parent("div") is None):
-                    content.append(p.text)
-        else:
-            for p in article.findAll('p'):
-                if not(p.text is None):
-                    content.append(p.text)
-        contentText = "%s %s\n" % ("CONTENT:", "".join(content))
-        print(contentText)
-        f.write(contentText)
+        content = "".join(content)
+    except Exception as e:
+        print("Исключение при определении содержимого статьи", url, e)
+        content = ""
+        hasError = True
+    contentText = "%s %s\n" % ("CONTENT:", content)
+    print(contentText)
+    f.write(contentText) 
 
-        #Дата статьи
-        print(dateText)
-        f.write(dateText)
+    #Дата статьи
+    print(dateText)
+    f.write(dateText) 
 
-        #Теги
-        tags = []
+    #Теги
+    tags = []
+    try:
         for tag in s.findAll('a', {'class':'article-tag'}):
             tags.append(tag.text)
-        tagsText = "%s %s\n" % ("TAGS:", ", ".join(tags))
-        print(tagsText)
-        f.write(tagsText)
+    except Exception as e:
+        print("Исключение при определении тегов статьи", url, e)
+        tags = []
+        hasError = True
+    tags = ", ".join(tags)
+    tagsText = "%s %s\n" % ("TAGS:", tags)
+    print(tagsText)
+    f.write(tagsText) 
 
-        #Разделитель
-        separatorText = "__________________________________________________________________________________\n"
-        print(separatorText)
-        f.write(separatorText)
+    #Разделитель для печати в файл и на консоль
+    separatorText = "__________________________________________________________________________________\n"
+    print(separatorText)
+    f.write(separatorText)
 
     f.close()
 
+    # Обращение к внешнему объекту elasticsearchCrawlerClient
+    try:
+        if not(elasticsearchCrawlerClient.contains(url)) and not(hasError):
+            elasticsearchCrawlerClient.put(url, content, date, header, tags)
+    except Exception as e:
+        print('Исключение при записи в БД', e)
 
-def collectUrls(baseUrl, searchUrl):
+
+def CollectUrls(baseUrl, searchUrl):
     f = open("crawlerResult.txt", "w")
     f.close()
     flag = True
@@ -83,14 +108,30 @@ def collectUrls(baseUrl, searchUrl):
 
     #Обходим все ссылки в поиске по сайту по "Росэнергоатом"
     while(flag):
-        flag = False
-        url = "%s%s" % (searchUrl, count)
-        code = requests.get(url)
-        plain = code.text
-        s = BeautifulSoup(plain, "html.parser")
-        count += 1
+        try:
+            flag = False
+            url = "%s%s" % (searchUrl, count)
+            html = getHtmlWithProxy(url)
+            s = BeautifulSoup(html, "html.parser")
+            count += 1
 
-        for heading in s.findAll('div', {'class':'heading'}):
-            crawl("%s%s" % (baseUrl, heading.h4.a.get('href')))
-            #crawl("%s%s" % ('http://www.sdelanounas.ru', '/blogs/107618'))
-            flag = True
+            for heading in s.findAll('div', {'class':'heading'}):
+                flag = True
+                Crawl("%s%s" % (baseUrl, heading.h4.a.get('href')))
+                #Crawl("%s%s" % ('http://www.sdelanounas.ru', '/blogs/5307'))
+        except Exception as e:
+            print('Исключение в CollectUrls', e)
+            continue
+
+def getHtmlWithProxy(url):
+    time.sleep(round(abs(random.gauss(1.5, 1) + random.random()/10 + random.random()/100), 4))
+    useragent = {'User-Agent': random.choice(list_of_user_agents)}
+    proxy = {'http': random.choice(list_of_viable_proxies)}
+    r = requests.get(url, timeout = None, headers = useragent, proxies = {'': proxy})
+    return r.text
+
+
+elasticsearchCrawlerClient = ElasticsearchCrawlerClient("http://127.0.0.1:9300/")
+#Proxy
+list_of_viable_proxies = get_viable_proxy_list(get_html_proxy('https://www.ip-adress.com/proxy-list'),10)
+list_of_user_agents = open('../proxy/useragents.txt').read().split('\n')
