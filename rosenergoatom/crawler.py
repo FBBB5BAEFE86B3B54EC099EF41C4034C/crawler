@@ -6,14 +6,13 @@ from bs4 import BeautifulSoup
 
 from proxy.proxy_getter import get_html_proxy
 from proxy.proxy_getter import get_viable_proxy_list
-from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClient
-
+from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClientFactory
 
 list_of_viable_proxies = get_viable_proxy_list(get_html_proxy('https://www.ip-adress.com/proxy-list'), 10)
 list_of_user_agents = open('../proxy/useragents.txt').read().split('\n')
 # Подсчет кол-ва статей
 numberArticle = 0
-elasticsearchCrawlerClient = ElasticsearchCrawlerClient("http://127.0.0.1:9300/")
+elasticsearchCrawlerClient = ElasticsearchCrawlerClientFactory().getSingleton()
 
 
 def get_html(url, user_agent, proxy):

@@ -1,11 +1,13 @@
-from proxy.proxy_getter import get_viable_proxy_list
-from proxy.proxy_getter import get_html_proxy
-from bs4 import BeautifulSoup
-from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClient
-import requests
 import random
 import time
-import os
+
+import requests
+from bs4 import BeautifulSoup
+
+from proxy.proxy_getter import get_html_proxy
+from proxy.proxy_getter import get_viable_proxy_list
+from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClientFactory
+
 
 def Crawl(webUrl):
     url = webUrl
@@ -131,7 +133,7 @@ def getHtmlWithProxy(url):
     return r.text
 
 
-elasticsearchCrawlerClient = ElasticsearchCrawlerClient("http://127.0.0.1:9300/")
+elasticsearchCrawlerClient = ElasticsearchCrawlerClientFactory().getSingleton()
 #Proxy
 list_of_viable_proxies = get_viable_proxy_list(get_html_proxy('https://www.ip-adress.com/proxy-list'),10)
 list_of_user_agents = open('../proxy/useragents.txt').read().split('\n')
