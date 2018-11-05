@@ -1,11 +1,11 @@
-import requests
 import os
+
+import requests
 # from lxml import html
 from bs4 import BeautifulSoup
-from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClient
+from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClientFactory
 
-elasticsearchCrawlerClient = ElasticsearchCrawlerClient("http://127.0.0.1:9300/")
-
+elasticsearchCrawlerClient = ElasticsearchCrawlerClientFactory().getSingleton()
 
 def crawler():
     header = {'User-Agent':
@@ -60,12 +60,21 @@ def crawler():
                 continue
             elif x['href'] in mass:
                 continue
+
+
             mass.append(x['href'])
+            urlText = url_majors+x['href']
+            headerText = ''.join([c if c not in ['\n','\t'] else '' for c in title])
+            contentText = ''
+            dateText = ''
+            tagsText = []
+
             try:
                 with open(dir+'/'+'file'+'.txt','a') as f:
                     ll_rec = requests.get(url_majors+x['href'], headers = header)
                     loc_soup = BeautifulSoup(ll_rec.text, "html.parser")
                     l_title = loc_soup.find('div', {'class':'clearfix'}).find('h1').text
+
                     f.write('URL: ' + url_majors+x['href'] + '\n')
                     f.write('HEADER: ' + ''.join([c if c not in ['\n','\t'] else '' for c in title]) + '\n')
                     f.write('CONTENT: ')
@@ -76,7 +85,10 @@ def crawler():
                     for te in loc_soup.find_all('p'):
                         content += te.text + '\n'
 
+                    contentText = content
+
                     try:
+                        dateText = ''.join([c if c not in ['\n','\t'] else '' for c in loc_soup.find('div', {'class': 'node-meta__date'}).text])
                         f.write('DATE: ' + ''.join([c if c not in ['\n','\t'] else '' for c in loc_soup.find('div', {'class': 'node-meta__date'}).text]) + '\n')
                     except:
                         f.write('DATE: ' + 'no Date ' + '\n')
@@ -90,6 +102,7 @@ def crawler():
                             te = tag.find('a').text
                             sp = tag.find('span').text
                             f.write(te + sp + ' ')
+                            tagsText.append(te + sp)
                         f.write('\n')
                     except:
                         f.write('TAGS: ' + '\n')
@@ -97,15 +110,11 @@ def crawler():
             except Exception as e:
                 pass
 
-            #try:
-            #    if elasticsearchCrawlerClient.contains(url_majors+x['href']):
-            #        pass
-            #    else:
-            #        elasticsearchCrawlerClient.put(
-            #            url_majors+x['href'],
-            #            content,
-            #            ''.join([c if c not in ['\n', '\t'] else '' for c in loc_soup.find('div', {'class': 'node-meta__date'}).text]),
-            #            ''.join([c if c not in ['\n','\t'] else '' for c in title] ,
-            #                    tags)
-            #except:
-            #    pass
+            try:
+                if elasticsearchCrawlerClient.contains(urlText):
+                    pass
+                else:
+                    if contentText != '':
+                        elasticsearchCrawlerClient.put(urlText, contentText, dateText, headerText, tagsText)
+            except:
+                pass
