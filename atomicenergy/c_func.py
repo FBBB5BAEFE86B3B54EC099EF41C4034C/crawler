@@ -1,5 +1,5 @@
 import requests
-from dateutil.parser import *
+import dateparser
 
 
 from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClientFactory
@@ -50,7 +50,7 @@ def write_to_file(dir, link, _soup_):
         try:
             key_ = link
             data_ = data
-            date_ = parse(date).date()
+            date_ = dateparser.parse(date).date()
             tags_ = t
             head_ = title
             if elasticsearchCrawlerClient.contains(key_):

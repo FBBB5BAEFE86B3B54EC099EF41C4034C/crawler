@@ -7,13 +7,13 @@ import threading
 class core_processor(object):
 
     list_of_jobs = [
-        #ClassificationJob()
+        ClassificationJob()
     ]
 
     list_of_crawlers = [
         AtomicEnergyProvider(),
-        #RosenergoatomProvider(),
-        #SdelanoUNasProvider()
+        RosenergoatomProvider(),
+        SdelanoUNasProvider()
     ]
 
     def process(self):

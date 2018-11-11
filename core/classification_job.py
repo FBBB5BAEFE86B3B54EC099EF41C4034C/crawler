@@ -16,7 +16,7 @@ class ClassificationJob(object):
             try:
              documentManager = DocumentStateManager(self.elasticsearchCrawlerClient)
              if documentManager.document != None:
-                clazz = self.classifier.text(documentManager.document['data'])[0]
+                clazz = "_".join(self.classifier.text(documentManager.document['data'])[0].split(" "))
                 if clazz != '':
                     documentManager.change_state(clazz)
             except:
