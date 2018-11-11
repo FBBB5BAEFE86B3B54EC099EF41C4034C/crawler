@@ -3,10 +3,12 @@ import time
 
 import requests
 from bs4 import BeautifulSoup
-
+from dateutil.parser import *
 from proxy.proxy_getter import get_html_proxy
 from proxy.proxy_getter import get_viable_proxy_list
 from repository.ElasticsearchCrawlerClient import ElasticsearchCrawlerClientFactory
+import traceback
+
 
 list_of_viable_proxies = get_viable_proxy_list(get_html_proxy('https://www.ip-adress.com/proxy-list'), 10)
 list_of_user_agents = open('../proxy/useragents.txt').read().split('\n')
@@ -28,8 +30,6 @@ def NewArticleUrl(start_url):
 
     # header = {'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'}
     web_url = "%s%s" % (start_url, '29278?PAGEN_1=')
-    file_craw = open("craw_rosenergoatom.txt", "w")
-    file_craw.close()
     count = 7
     global numberArticle
 
@@ -41,7 +41,6 @@ def NewArticleUrl(start_url):
         count -= 1
 
         for a in s.findAll('p', {'class': 'news-item'}):
-            print("NUMBER OF ARTICLE: ", numberArticle, '\n')
             item_id = a.get('id')
             length = len(item_id)
             item_start = item_id.rfind('_', 0, length) + 1
@@ -57,8 +56,6 @@ def OldArticleUrl(start_url):
 
     # header = {'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'}
     web_url = "%s%s" % (start_url, '?PAGEN_1=')
-    file_craw = open("craw_rosenergoatom.txt", "a")
-    file_craw.close()
     count = 0
     global numberArticle
 
@@ -80,7 +77,6 @@ def OldArticleUrl(start_url):
         head = s.findAll('div', {'class': 'news-list'})[2]
 
         for a in head.findAll('p', {'class': 'news-item'}):
-            print("NUMBER OF ARTICLE: ", numberArticle, '\n')
             item_id = a.get('id')
             length = len(item_id)
             item_start = item_id.rfind('_', 0, length) + 1
@@ -90,72 +86,50 @@ def OldArticleUrl(start_url):
 
 
 def Crawler(url):
+    global content, date, tag, title
     time.sleep(round(abs(random.gauss(1.5, 1) + random.random() / 10 + random.random() / 100), 4))
     useragent = {'User-Agent': random.choice(list_of_user_agents)}
     proxy = {'http': random.choice(list_of_viable_proxies)}
 
-    # header = {'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0'}
-    # code = requests.get(url)
-    # code = requestGet(url)
     code = get_html(url, useragent, proxy)
     soup = BeautifulSoup(code, "html.parser")
-    file_craw = open("craw_rosenergoatom.txt", mode='a', encoding='utf8')
-    print(url)
 
     # Дата
     try:
         div = soup.find('div', {'id': 'content'})
         date = div.find('span', {'class': 'news-date-time'})
-        dateText = "\n%s %s\n" % ("DATE:", date.text)
+        date = parse(date.text).date()
     except:
-        dateText = "DATE:\n"
-    print(dateText)
-    file_craw.write(dateText)
-
+        pass
     # Tag
     # tag = soup.find('div', {'class':'col-lg-6 content-block'}).find('h1')
     try:
         tag = div.find('small', {'class': 'sourcetext'})
-        tagText = "%s %s\n" % ("TAG:", tag.text.strip())
     except:
-        tagText = "TAG:\n"
-    print(tagText)
-    file_craw.write(tagText)
-
+        pass
     # Заголовок
     try:
         title = div.find('p', {'class': 'detnewsTitle'})
-        titleText = "%s %s\n" % ("TITLE:", title.text.strip())
     except:
-        titleText = "TITLE:\n"
-    print(titleText)
-    file_craw.write(titleText)
+       pass
 
     # Статья
     try:
         content = div.find('div').find('div')
-        contentText = "%s %s\n" % ("CONTENT:", content.text.strip().replace("\n", ""))
     except:
-        contentText = "CONTENT:\n"
-    print(contentText)
-    file_craw.write(contentText)
-
-    # Разделитель
-    separatorText = "______________________________________________________________________________________\n"
-    print(separatorText)
-    file_craw.write(separatorText)
-
-    file_craw.close()
+        pass
 
     try:
         if not(elasticsearchCrawlerClient.contains(url)):
             elasticsearchCrawlerClient.put(url,
                                            content.text.strip().replace("\n", ""),
-                                           date.text,
+                                           date,
                                            title.text.strip(),
                                            tag.text.strip())
     except Exception:
         print('Ошибка записи в базу')
+        traceback.print_exc()
+
 
 
 def crawl():

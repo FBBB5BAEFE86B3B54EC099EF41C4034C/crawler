@@ -6,7 +6,7 @@ import time
 
 class ClassificationJob(object):
 
-    def __init__(self, delayBeforeProcess = 60):
+    def __init__(self, delayBeforeProcess = 1):
         self.delay = delayBeforeProcess
         self.elasticsearchCrawlerClient = ElasticsearchCrawlerClientFactory().getSingleton()
         self.classifier = Classifier()
@@ -16,9 +16,9 @@ class ClassificationJob(object):
             try:
              documentManager = DocumentStateManager(self.elasticsearchCrawlerClient)
              if documentManager.document != None:
-                clаss = self.classifier.text(documentManager.document['data'])[0]
-                if clаss != '':
-                    documentManager.change_state(clаss)
+                clazz = self.classifier.text(documentManager.document['data'])[0]
+                if clazz != '':
+                    documentManager.change_state(clazz)
             except:
                 print("EXCEPTION WHILE CHANGE CLASS")
                 traceback.print_exc()

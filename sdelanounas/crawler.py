@@ -1,8 +1,8 @@
 import random
-import time
-
+import time as tm
 import requests
 from bs4 import BeautifulSoup
+from dateutil.parser import *
 
 from proxy.proxy_getter import get_html_proxy
 from proxy.proxy_getter import get_viable_proxy_list
@@ -13,7 +13,6 @@ def Crawl(webUrl):
     url = webUrl
     html = getHtmlWithProxy(url)
     s = BeautifulSoup(html, "html.parser")
-    f = open("crawlerResult.txt", mode='a', encoding='utf8')
     hasError = False
 
     #Дата статьи
@@ -22,16 +21,11 @@ def Crawl(webUrl):
         if date.findAll('span'):
             date.span.replace_with(" ")
         date = date.text
+        date = parse(date).date()
     except Exception as e:
         print("Исключение при определении даты статьи", url, e)
         date = ""
         hasError = True
-    dateText = "%s %s\n" % ("DATE:", date)
-
-    #URL
-    urlText = "%s %s\n" % ("URL:", webUrl)
-    print(urlText)
-    f.write(urlText) 
 
     #Заголовок статьи
     header = ""
@@ -44,9 +38,6 @@ def Crawl(webUrl):
     except Exception as e:
         print("Исключение при определении заголовка статьи", url, e)
         header = ""
-    headerText = "%s %s\n" % ("HEADER:", header)
-    print(headerText)
-    f.write(headerText) 
 
     #Содержимое статьи
     try:
@@ -65,13 +56,6 @@ def Crawl(webUrl):
         print("Исключение при определении содержимого статьи", url, e)
         content = ""
         hasError = True
-    contentText = "%s %s\n" % ("CONTENT:", content)
-    print(contentText)
-    f.write(contentText) 
-
-    #Дата статьи
-    print(dateText)
-    f.write(dateText) 
 
     #Теги
     tags = []
@@ -83,16 +67,6 @@ def Crawl(webUrl):
         tags = []
         hasError = True
     tags = ", ".join(tags)
-    tagsText = "%s %s\n" % ("TAGS:", tags)
-    print(tagsText)
-    f.write(tagsText) 
-
-    #Разделитель для печати в файл и на консоль
-    separatorText = "__________________________________________________________________________________\n"
-    print(separatorText)
-    f.write(separatorText)
-
-    f.close()
 
     # Обращение к внешнему объекту elasticsearchCrawlerClient
     try:
@@ -103,8 +77,6 @@ def Crawl(webUrl):
 
 
 def CollectUrls(baseUrl, searchUrl):
-    f = open("crawlerResult.txt", "w")
-    f.close()
     flag = True
     count = 0
 
@@ -126,7 +98,7 @@ def CollectUrls(baseUrl, searchUrl):
             continue
 
 def getHtmlWithProxy(url):
-    time.sleep(round(abs(random.gauss(1.5, 1) + random.random()/10 + random.random()/100), 4))
+    tm.sleep(round(abs(random.gauss(1.5, 1) + random.random()/10 + random.random()/100), 4))
     useragent = {'User-Agent': random.choice(list_of_user_agents)}
     proxy = {'http': random.choice(list_of_viable_proxies)}
     r = requests.get(url, timeout = None, headers = useragent, proxies = {'': proxy})

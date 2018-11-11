@@ -1,4 +1,4 @@
-from atomicenergy import crawler as crawler
+from atomicenergy import crawler2 as crawler
 from core.crawlerprovider import CrawlerProvider
 
 class AtomicEnergyProvider(CrawlerProvider):

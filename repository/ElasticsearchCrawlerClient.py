@@ -136,7 +136,7 @@ class ElasticsearchCrawlerClient(object):
 
 class ElasticsearchCrawlerClientFactory(object):
 
-    def __init__(self, url = "http://127.0.0.1:9300/"):
+    def __init__(self, url = "http://127.0.0.1:9200/"):
         self.url = url
         self.clientSingleton = ElasticsearchCrawlerClient(self.url)
 
