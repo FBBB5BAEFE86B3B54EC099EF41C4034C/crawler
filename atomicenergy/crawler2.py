@@ -18,7 +18,7 @@ def crawler():
     # получение всех прокси и заголовков
     list_of_viable_proxies = get_viable_proxy_list(get_html_proxy('https://www.ip-adress.com/proxy-list'),10)
     cur_dir = os.path.dirname(__file__)
-    useragent_filename = os.path.join(cur_dir, '../proxy/useragents.txt')
+    useragent_filename = os.path.join(cur_dir, 'proxy/useragents.txt')
     list_of_user_agents = open(useragent_filename).read().split('\n')
 
     useragent = {'User-Agent': random.choice(list_of_user_agents)}

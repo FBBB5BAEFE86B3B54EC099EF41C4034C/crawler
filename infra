@@ -1,1 +1,25 @@
+## Создания и запуск контейнера с эластиком
 sudo docker run -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:6.4.3
+
+## Настройка и установка тулзов для создания окружений
+
+sudo pip3 install virtualenv virtualenvwrapper
+
+В ~/.bashrc дописываем:
+export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
+source /usr/bin/virtualenvwrapper.sh
+
+## запуск окружений
+
+
+mkvirtualenv eNV-NAME
+workon ENV-NAME
+pip3 install -r requirements.txt
+python3.7 core_processor.py
+
+
+## Выйти из окружения
+deactivate
+
+## Удалить окружение
+rmvirtualenv ENV-NAME

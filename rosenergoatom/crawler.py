@@ -11,7 +11,7 @@ import traceback
 
 
 list_of_viable_proxies = get_viable_proxy_list(get_html_proxy('https://www.ip-adress.com/proxy-list'), 10)
-list_of_user_agents = open('../proxy/useragents.txt').read().split('\n')
+list_of_user_agents = open('proxy/useragents.txt').read().split('\n')
 # Подсчет кол-ва статей
 numberArticle = 0
 elasticsearchCrawlerClient = ElasticsearchCrawlerClientFactory().getSingleton()
